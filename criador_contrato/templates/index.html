@@ -57,7 +57,7 @@
     <form action="{% url 'gerar_contrato' %}" method="POST" class="bg-white p-5 rounded shadow">
       {% csrf_token %}
       <div class="form-group">
-        <label for="genero">Gênero:</label>
+        <label for="genero">Gênero do administrador:</label>
         <div>
           <label>
             <input type="radio" name="genero" value="Homem" required> Homem
@@ -68,7 +68,7 @@
         </div>
       </div>
       <div class="form-group">
-        <label for="contratante">Contratante:</label>
+        <label for="contratante">Empresa Contratante:</label>
         <input type="text" id="contratante" name="contratante" class="form-control form-control-sm" required>
       </div>
       <div class="form-group">
@@ -88,7 +88,7 @@
         <input type="email" id="email" name="email" class="form-control form-control-sm" required>
       </div>
       <div class="form-group">
-        <label for="cep">CEP:</label>
+        <label for="cep">CEP: "PREENCHA O CEP QUE ELE PREENCHE AUTOMATICAMENTE"</label>
         <input type="text" id="cep" name="cep" class="form-control form-control-sm">
         <button type="button" id="consultar_cep" class="btn btn-primary btn-sm" style="margin-top: 10px;">Consultar CEP</button>
       </div>
