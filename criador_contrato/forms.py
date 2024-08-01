@@ -5,6 +5,7 @@ class ContratoForm(forms.Form):
     contratante = forms.CharField(max_length=18, required=True)  # CNPJ
     adm = forms.CharField(max_length=100, required=True)
     cpf = forms.CharField(max_length=14, required=True)
+    cnpj = forms.CharField(max_length=18, required=True)
     email = forms.EmailField(required=True)
     cep = forms.CharField(max_length=9, required=True)
     rua = forms.CharField(max_length=100, required=True)

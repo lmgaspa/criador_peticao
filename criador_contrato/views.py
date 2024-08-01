@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from .forms import ContratoForm
 from docx import Document
+from docx.shared import Pt, RGBColor
 import os
 import brazilcep
 from datetime import datetime
@@ -24,9 +25,11 @@ def gerar_contrato(request):
 
             # Ajusta os dados conforme o gênero do administrador
             if dados['genero'] == 'Homem':
-                dados['inscrito'] = 'inscrito'
+                dados['generoadm'] = 'representado pelo seu administrador'
+                dados['inscrito'] = 'portador do'
             else:
-                dados['inscrito'] = 'inscrita'
+                dados['generoadm'] = 'representada pela sua administradora'
+                dados['inscrito'] = 'portadora do'
 
             # Adiciona cidade e data atual
             dados['cidade'] = dados.get('cidade', '')
@@ -34,25 +37,42 @@ def gerar_contrato(request):
 
             # Carrega o documento do modelo de contrato
             doc_path = os.path.join(os.path.dirname(__file__), 'modelo_contrato.docx')
-            doc = Document(doc_path)
+            if not os.path.exists(doc_path):
+                return HttpResponse("Modelo de contrato não encontrado.", status=404)
+            
+            try:
+                doc = Document(doc_path)
 
-            # Substitui os placeholders pelos dados do formulário
-            for paragrafo in doc.paragraphs:
-                for chave, valor in dados.items():
-                    paragrafo.text = paragrafo.text.replace(f'{{{{ {chave} }}}}', valor)
-
-            # Verifica e substitui os placeholders nos "runs" do parágrafo
-            for paragrafo in doc.paragraphs:
-                for run in paragrafo.runs:
+                # Define o estilo para o texto das variáveis
+                for paragrafo in doc.paragraphs:
                     for chave, valor in dados.items():
-                        run.text = run.text.replace(f'{{{{ {chave} }}}}', valor)
+                        placeholder = f'{{{{ {chave} }}}}'
+                        if placeholder in paragrafo.text:
+                            for run in paragrafo.runs:
+                                if placeholder in run.text:
+                                    run.text = run.text.replace(placeholder, valor)
+                                    run.font.name = 'Arial'
+                                    run.font.size = Pt(10)
+                                    run.font.color.rgb = RGBColor(0, 0, 0)  # Cor preta
 
-            # Prepara a resposta com o documento gerado
-            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-            response['Content-Disposition'] = 'attachment; filename=contrato_gerado.docx'
-            doc.save(response)
+                # Define o estilo para o texto "CONTRATANTE:"
+                for paragrafo in doc.paragraphs:
+                    if 'CONTRATANTE:' in paragrafo.text:
+                        for run in paragrafo.runs:
+                            if 'CONTRATANTE:' in run.text:
+                                run.bold = True
 
-            return response
+                # Prepara a resposta com o documento gerado
+                response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+                response['Content-Disposition'] = 'attachment; filename=contrato_gerado.docx'
+                
+                # Salva o documento no buffer de resposta
+                doc.save(response)
+                
+                return response
+
+            except Exception as e:
+                return HttpResponse(f"Erro ao gerar o documento: {str(e)}", status=500)
 
     return HttpResponse("Método não permitido.", status=405)
 
@@ -62,9 +82,9 @@ def consultar_cep(request):
         try:
             endereco = brazilcep.get_address_from_cep(cep)
             return JsonResponse({
-                'rua': endereco.get('street'),
-                'cidade': endereco.get('city'),
-                'estado': endereco.get('uf')
+                'rua': endereco.get('street', ''),
+                'cidade': endereco.get('city', ''),
+                'estado': endereco.get('uf', '')
             })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
