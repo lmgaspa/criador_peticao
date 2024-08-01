@@ -7,8 +7,7 @@ SECRET_KEY = 'django-insecure-ns-+fv7v-&1kk@)-i-iu7k04^z#s)#9vr2lx5yp!9n%i345@2*
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['criador-peticao.onrender.com']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -19,7 +18,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'criador_contrato',
     'bootstrap4',
-    
     'widget_tweaks',
 ]
 
