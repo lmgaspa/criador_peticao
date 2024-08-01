@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  {% load static %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Contratos</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.pt-BR.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <script src="{% static 'js/jquery.mask.min.js' %}"></script>
+  <script>
+    $(document).ready(function() {
+      // Inicializa o datepicker
+      $('#data_atual').datepicker({
+        format: 'dd/mm/yyyy',
+        language: 'pt-BR',
+        autoclose: true,
+        todayHighlight: true
+      });
+
+      // Função para aplicar a máscara
+      function aplicarMascara() {
+        const tipoPessoa = $('input[name="tipo_pessoa"]:checked').val();
+        if (tipoPessoa === 'CPF') {
+          $('#cpf_cnpj').unmask().mask('000.000.000-00', {reverse: true});
+        } else if (tipoPessoa === 'CNPJ') {
+          $('#cpf_cnpj').unmask().mask('00.000.000/0000-00', {reverse: true});
+        }
+
+        // Máscaras para as testemunhas
+        $('#testemunha_cpf1').unmask().mask('000.000.000-00', {reverse: true});
+        $('#testemunha_cpf2').unmask().mask('000.000.000-00', {reverse: true});
+      }
+
+      // Marca o tipo de pessoa padrão como CPF e ajusta os campos
+      $('input[name="tipo_pessoa"][value="CPF"]').prop('checked', true);
+      aplicarMascara();
+      toggleFields();
+
+      // Atualiza as máscaras e os campos ao mudar o tipo de pessoa
+      $('input[name="tipo_pessoa"]').change(function() {
+        aplicarMascara();
+        toggleFields();
+      });
+
+      // Consulta o CEP e preenche os campos
+      $('#consultar_cep').click(function() {
+        const cep = $('#cep').val();
+        if (cep) {
+          $.ajax({
+            url: '{% url "consultar_cep" %}',
+            data: {'cep': cep},
+            success: function(data) {
+              if (data.error) {
+                alert(data.error);
+              } else {
+                $('#rua').val(data.rua);
+                $('#cidade').val(data.cidade);
+                $('#estado').val(data.estado);
+              }
+            },
+            error: function() {
+              alert('Erro ao consultar o CEP.');
+            }
+          });
+        }
+      });
+
+      // Alterna a exibição de campos com base no tipo de pessoa
+      function toggleFields() {
+        const tipoPessoa = $('input[name="tipo_pessoa"]:checked').val();
+        const isCpf = tipoPessoa === 'CPF';
+
+        $('#genero_field').toggle(isCpf);
+        $('#nacionalidade_field').toggle(isCpf);
+        $('#profissao_field').toggle(isCpf);
+        
+        $('#cpf_cnpj_label').text(isCpf ? 'CPF:' : 'CNPJ');
+        $('#cpf_cnpj').val('');
+        
+        $('#endereco_label').text('Endereço:');
+        $('#endereco').attr('placeholder', isCpf ? 'residente e domiciliado na...' : 'com endereço profissional na...');
+        
+        if (isCpf) {
+          updateEndereco();
+        } else {
+          $('#nacionalidade').val('');
+          $('#endereco').val('com endereço profissional na');
+        }
+      }
+
+      // Atualiza o campo de endereço e nacionalidade com base no gênero
+      function updateEndereco() {
+        const genero = $('input[name="genero"]:checked').val();
+        const nacionalidade = $('#nacionalidade');
+        const endereco = $('#endereco');
+
+        if (genero) {
+          if (genero === 'Homem') {
+            nacionalidade.val('Brasileiro');
+            endereco.val('residente e domiciliado na');
+          } else {
+            nacionalidade.val('Brasileira');
+            endereco.val('residente e domiciliada na');
+          }
+        } else {
+          console.error('Erro: Gênero não selecionado.');
+        }
+      }
+
+      // Configura o evento de mudança para atualizar os campos quando o tipo de pessoa é alterado
+      $('input[name="tipo_pessoa"]').change(toggleFields);
+
+      // Configura o evento de mudança para atualizar o endereço e nacionalidade quando o gênero é alterado
+      $('input[name="genero"]').change(updateEndereco);
+    });
+  </script>
+</head>
+<body class="bg-light">
+  <div class="container mt-3">
+    <h1 class="text-center mb-2">Gerador de Contratos</h1>
+    <h5 class="text-center mb-2">Modelo de Contrato de Responsabilidade</h5>
+    <form action="{% url 'gerar_contrato' %}" method="POST" class="bg-white p-5 rounded shadow">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>O contratante é:</label>
+        <div>
+          <label style="padding-right: 20px;">
+            <input type="radio" name="tipo_pessoa" value="CPF" required> CPF
+          </label>
+          <label>
+            <input type="radio" name="tipo_pessoa" value="CNPJ" required> CNPJ
+          </label>
+        </div>
+      </div>
+      <div class="form-group" id="genero_field">
+        <label>Gênero:</label>
+        <div>
+          <label>
+            <input type="radio" name="genero" value="Homem"> Homem
+          </label>
+          <label class="ml-3">
+            <input type="radio" name="genero" value="Mulher"> Mulher
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="contratante">Contratante:</label>
+        <input type="text" id="contratante" name="contratante" class="form-control form-control-sm" required>
+      </div>
+      <div class="form-group" id="nacionalidade_field">
+        <label for="nacionalidade">Nacionalidade:</label>
+        <input type="text" id="nacionalidade" name="nacionalidade" class="form-control form-control-sm">
+      </div>
+      <div class="form-group">
+        <label for="cpf_cnpj" id="cpf_cnpj_label">CPF/CNPJ</label>
+        <input type="text" id="cpf_cnpj" name="cpf_cnpj" class="form-control form-control-sm" required>
+      </div>
+      <div class="form-group" id="profissao_field">
+        <label for="profissao">Profissão:</label>
+        <input type="text" id="profissao" name="profissao" class="form-control form-control-sm">
+      </div>
+      <div class="form-group">
+        <label for="cep">CEP:</label>
+        <input type="text" id="cep" name="cep" class="form-control form-control-sm">
+        <button type="button" id="consultar_cep" class="btn btn-primary btn-sm" style="margin-top: 10px;">Consultar CEP</button>
+      </div>
+      <div class="form-group">
+        <label for="rua">Rua:</label>
+        <input type="text" id="rua" name="rua" class="form-control form-control-sm" required>
+      </div>
+      <div class="form-group">
+        <label for="cidade">Cidade:</label>
+        <input type="text" id="cidade" name="cidade" class="form-control form-control-sm" required>
+      </div>
+      <div class="form-group">
+        <label for="estado">Estado:</label>
+        <input type="text" id="estado" name="estado" class="form-control form-control-sm" required>
+      </div>
+      <div class="form-group">
+        <label for="data_atual">Data Atual:</label>
+        <input type="text" id="data_atual" name="data_atual" class="form-control form-control-sm" required>
+      </div>
+      <div class="form-group">
+        <label for="testemunha_nome1">Nome da Testemunha 1:</label>
+        <input type="text" id="testemunha_nome1" name="testemunha_nome1" class="form-control form-control-sm">
+      </div>
+      <div class="form-group">
+        <label for="testemunha_cpf1">CPF da Testemunha 1:</label>
+        <input type="text" id="testemunha_cpf1" name="testemunha_cpf1" class="form-control form-control-sm">
+      </div>
+      <div class="form-group">
+        <label for="testemunha_nome2">Nome da Testemunha 2:</label>
+        <input type="text" id="testemunha_nome2" name="testemunha_nome2" class="form-control form-control-sm">
+      </div>
+      <div class="form-group">
+        <label for="testemunha_cpf2">CPF da Testemunha 2:</label>
+        <input type="text" id="testemunha_cpf2" name="testemunha_cpf2" class="form-control form-control-sm">
+      </div>
+      <div class="text-right">
+        <button type="submit" class="btn btn-primary">Gerar Contrato</button>
+      </div>
+    </form>
+  </div>
+</body>
+</html>
