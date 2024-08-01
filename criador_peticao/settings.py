@@ -18,7 +18,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'criador_contrato',
     'bootstrap4',
-    'input_mask',
     'widget_tweaks',
 ]
 
